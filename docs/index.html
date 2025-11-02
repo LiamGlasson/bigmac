@@ -50,13 +50,10 @@
             <hr />
 
             <section class="code">
-                <h4>Entry code</h4>
-                <code id="code">&nbsp;</code>
+                <h4>Entry codes (10 random)</h4>
+                <div id="code">&nbsp;</div>
             </section>
-
             <hr />
-
-            <a href="https://github.com/sapphire-bt/mcdonalds-uk-survey-codes"><small>Source</small></a>
         </main>
 
         <script src="js/get_code.js"></script>
@@ -88,11 +85,54 @@
                         alert("Invalid details");
                     }
                 });
+
+                // Auto-generate 10 random codes on load using reg=7
+                async function generateRandomCodes(count = 10) {
+                    const codeContainer = document.querySelector('#code');
+                    const stores = await getStores();
+
+                    if (!stores || stores.length === 0) {
+                        codeContainer.innerText = 'No stores available';
+                        return;
+                    }
+
+                    const list = document.createElement('ol');
+                    for (let i = 0; i < count; i++) {
+                        // pick random store entry (value is the id string)
+                        const store = stores[Math.floor(Math.random() * stores.length)];
+                        const storeId = parseInt(store.value, 10);
+
+                        // random order id between 0 and 99
+                        const orderId = Math.floor(Math.random() * 100);
+
+                        // random purchased time within the last week
+                        const now = new Date();
+                        const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+                        const randomPast = new Date(now.getTime() - Math.floor(Math.random() * oneWeekMs));
+
+                        const purchasedLocal = new Date(randomPast.getTime() - (randomPast.getTimezoneOffset() * 60000));
+                        const purchasedIso = purchasedLocal.toISOString().slice(0,16);
+
+                        const code = generateCode(storeId, orderId, purchasedIso, 7);
+
+                        const item = document.createElement('li');
+                        item.innerText = `${code} — ${store.label} — order ${String(orderId).padStart(3,'0')} — ${randomPast.toLocaleString()}`;
+                        list.appendChild(item);
+                    }
+
+                    // replace container contents
+                    codeContainer.innerHTML = '';
+                    codeContainer.appendChild(list);
+                }
+
+                // run after choices has been initialised above
+                // small delay to ensure stores are loaded into the select
+                setTimeout(() => generateRandomCodes(10), 300);
             })();
 
             function getStores() {
                 return new Promise(resolve => {
-                    fetch("https://raw.githubusercontent.com/sapphire-bt/mcdonalds-uk-survey-codes/main/assets/stores.tsv")
+                    fetch("https://raw.githubusercontent.com/liamglasson/bigmac/main/assets/stores.tsv")
                         .then(response => response.text())
                         .then(data => {
                             resolve(data.split("\n").map(row => {
